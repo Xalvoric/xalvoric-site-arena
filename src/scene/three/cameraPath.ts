@@ -1,6 +1,9 @@
 // Camera keyframes for the WebGL monolith, in hero scroll progress (0–1).
-// Each segment eases in and out, so the camera settles while a beat's copy
-// is on screen and moves (under the fog/glitch transition) between beats.
+// The camera is one continuous move: between keys it follows a monotone cubic
+// (Fritsch–Butland tangents), so its velocity is continuous through every key
+// instead of dropping to zero and restarting, which is what read as stepping.
+// It only slows to a stop where a value genuinely turns round (the closest
+// approach in beat 2), and it never overshoots a key.
 //
 // ox / oy shift the subject on screen without moving the camera (a view
 // offset, as a fraction of the viewport): positive ox pushes the monolith
@@ -34,8 +37,38 @@ export const portraitPath: CamKey3[] = [
   { p: 1, pos: [-3.4, 4.8, 25], look: [0, 3, 0], fov: 32, ox: 0, oy: 0.16 },
 ]
 
-const easeInOut = (t: number) => -(Math.cos(Math.PI * t) - 1) / 2
-const mix = (a: number, b: number, t: number) => a + (b - a) * t
+/** One flat vector per key: pos(3), look(3), fov, ox, oy. */
+const flat = (k: CamKey3) => [...k.pos, ...k.look, k.fov, k.ox, k.oy]
+const CHANNELS = 10
+
+/** Fritsch–Butland tangents (per unit p) for every channel of every key. Cached per path. */
+const tangentCache = new WeakMap<CamKey3[], number[][]>()
+function tangents(path: CamKey3[]) {
+  const hit = tangentCache.get(path)
+  if (hit) return hit
+  const v = path.map(flat)
+  const n = path.length
+  const m: number[][] = path.map(() => new Array<number>(CHANNELS).fill(0))
+  for (let c = 0; c < CHANNELS; c++) {
+    const d: number[] = []
+    for (let k = 0; k < n - 1; k++) d.push((v[k + 1][c] - v[k][c]) / (path[k + 1].p - path[k].p))
+    m[0][c] = d[0]
+    m[n - 1][c] = d[n - 2]
+    for (let k = 1; k < n - 1; k++) {
+      if (d[k - 1] * d[k] <= 0) {
+        m[k][c] = 0 // a turning point: settle here
+      } else {
+        const h0 = path[k].p - path[k - 1].p
+        const h1 = path[k + 1].p - path[k].p
+        const w1 = 2 * h1 + h0
+        const w2 = h1 + 2 * h0
+        m[k][c] = (w1 + w2) / (w1 / d[k - 1] + w2 / d[k])
+      }
+    }
+  }
+  tangentCache.set(path, m)
+  return m
+}
 
 export function cameraAt(path: CamKey3[], p: number): Omit<CamKey3, 'p'> {
   if (p <= path[0].p) return path[0]
@@ -45,12 +78,19 @@ export function cameraAt(path: CamKey3[], p: number): Omit<CamKey3, 'p'> {
   while (i < path.length - 2 && p > path[i + 1].p) i++
   const a = path[i]
   const b = path[i + 1]
-  const t = easeInOut((p - a.p) / (b.p - a.p))
-  return {
-    pos: [mix(a.pos[0], b.pos[0], t), mix(a.pos[1], b.pos[1], t), mix(a.pos[2], b.pos[2], t)],
-    look: [mix(a.look[0], b.look[0], t), mix(a.look[1], b.look[1], t), mix(a.look[2], b.look[2], t)],
-    fov: mix(a.fov, b.fov, t),
-    ox: mix(a.ox, b.ox, t),
-    oy: mix(a.oy, b.oy, t),
-  }
+  const h = b.p - a.p
+  const t = (p - a.p) / h
+  const t2 = t * t
+  const t3 = t2 * t
+  // Cubic Hermite basis.
+  const h00 = 2 * t3 - 3 * t2 + 1
+  const h10 = t3 - 2 * t2 + t
+  const h01 = -2 * t3 + 3 * t2
+  const h11 = t3 - t2
+  const m = tangents(path)
+  const va = flat(a)
+  const vb = flat(b)
+  const o: number[] = []
+  for (let c = 0; c < CHANNELS; c++) o.push(h00 * va[c] + h10 * h * m[i][c] + h01 * vb[c] + h11 * h * m[i + 1][c])
+  return { pos: [o[0], o[1], o[2]], look: [o[3], o[4], o[5]], fov: o[6], ox: o[7], oy: o[8] }
 }

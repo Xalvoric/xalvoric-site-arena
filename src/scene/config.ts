@@ -29,8 +29,15 @@ export type SceneLayer = {
   portraitKeys?: CamKey[]
 }
 
-/** Section height in viewport heights. More = slower, calmer sequence. */
-export const SCROLL_LENGTH_VH = 420
+/**
+ * Section height in viewport heights. More = slower, calmer sequence.
+ * Was 420 (4.2 screens before the first section); 340 keeps all three beats and the camera moves,
+ * with the Services headline arriving about a screen sooner.
+ */
+export const SCROLL_LENGTH_VH = 340
+
+/** Hero HUD frame counter runs 0..FRAME_COUNT over the hero's scroll (a label only). */
+export const FRAME_COUNT = 340
 
 export const layers: SceneLayer[] = [
   {

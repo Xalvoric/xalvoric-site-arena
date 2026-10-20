@@ -37,11 +37,12 @@ export const hero = {
   },
   detail: {
     eyebrow: 'What we do',
-    title: 'Three disciplines. One standard.',
+    title: 'One studio. Three ways in.',
+    /** Names only: the Services section below carries the detail, so nothing is said twice. */
     items: [
-      { label: 'Website development', note: 'Fast, considered sites that explain what you sell.', href: '#web' },
-      { label: 'AI agency', note: 'Agents and automations wired into real workflows.', href: '#ai' },
-      { label: 'Ad generation', note: 'Product visuals and video ads, made to test.', href: '#ads' },
+      { label: 'Website development', href: '#web' },
+      { label: 'AI agency', href: '#ai' },
+      { label: 'Ad generation', href: '#ads' },
     ],
   },
   resolve: {
@@ -52,10 +53,22 @@ export const hero = {
   },
 }
 
+/** Intro block of the Services section ("Three ways we help a business grow."). */
+export const servicesIntro = {
+  eyebrow: 'Services',
+  title: 'Three ways we help a business grow.',
+  lede: 'Take one service or combine them. Each is led by the same team, so your site, your tools and your ads speak with one voice.',
+  railLabel: 'Jump to a service',
+}
+
 export type Service = {
   id: string
   index: string
+  /** Mono tag shown above the name, e.g. in the pinned stage. */
+  kicker: string
   name: string
+  /** One plain sentence on what changes for the client. Restates `fit`; claims nothing new. */
+  outcome: string
   lede: string
   includes: string[]
   fit: string
@@ -65,7 +78,9 @@ export const services: Service[] = [
   {
     id: 'web',
     index: '01',
+    kicker: 'Build',
     name: 'Website development',
+    outcome: 'A site that explains what you sell.',
     lede: 'Marketing sites and web apps that load quickly, read clearly and are easy for your team to keep up to date.',
     includes: [
       'Positioning, page structure and copy direction',
@@ -78,7 +93,9 @@ export const services: Service[] = [
   {
     id: 'ai',
     index: '02',
+    kicker: 'Automate',
     name: 'AI agency',
+    outcome: 'Less repeat work for your team.',
     lede: 'We design and build AI agents and automations around the work your team already does, from first draft to daily use.',
     includes: [
       'Workflow mapping to find where AI actually helps',
@@ -91,7 +108,9 @@ export const services: Service[] = [
   {
     id: 'ads',
     index: '03',
+    kicker: 'Create',
     name: 'Ad generation',
+    outcome: 'More on-brand creative to test.',
     lede: 'AI-assisted product imagery and short video ads, art-directed so they look like your brand and not like a template.',
     includes: [
       'Creative concepts and hooks for each channel',

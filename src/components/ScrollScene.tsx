@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { beats, callouts, layers, outline, SCROLL_LENGTH_VH, TILT } from '../scene/config'
+import { beats, callouts, FRAME_COUNT, layers, outline, SCROLL_LENGTH_VH, TILT } from '../scene/config'
+import { follow } from '../scene/follow'
 import { clamp, driftAt, opacityAt } from '../scene/timeline'
 import { StillsRenderer } from '../scene/stillsRenderer'
 import type { AnchorName, FrameState, HeroRenderer } from '../scene/renderer'
@@ -51,6 +52,7 @@ function MotionScene() {
   const beatRefs = useRef<(HTMLDivElement | null)[]>([])
   const barRef = useRef<HTMLSpanElement>(null)
   const counterRef = useRef<HTMLSpanElement>(null)
+  const frameRef = useRef<HTMLSpanElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
 
   useEffect(() => {
@@ -60,7 +62,12 @@ function MotionScene() {
     const glCanvas = glRef.current!
     const svg = svgRef.current!
 
+    /** What is drawn. Follows `target` (the real scroll progress) very closely; see scene/follow.ts. */
     let progress = 0
+    /** Where the page is actually scrolled to. */
+    let target = 0
+    let lastTick = performance.now()
+    let lastFrameNo = -1
     let dirty = true
     let disposed = false
     let activeBeat = -1
@@ -212,16 +219,27 @@ function MotionScene() {
       for (let i = 1; i < beats.length; i++) {
         if (progress >= (beats[i - 1].window[3] + beats[i].window[0]) / 2) top = i
       }
+      const ops: number[] = []
       beats.forEach((b, i) => {
         const el = beatRefs.current[i]
         const op = opacityAt(b.window, progress)
+        ops[i] = op
         drift[i] = driftAt(b.window, progress) * -DRIFT_PX
         if (!el) return
         el.style.opacity = op.toFixed(3)
         el.style.transform = `translate3d(${(-tiltX * TILT.copyPx).toFixed(1)}px, ${drift[i].toFixed(1)}px, 0)`
         el.toggleAttribute('data-live', op > 0.6)
       })
+      // Side shades follow whichever copy block is showing; the veil takes the frame to page black at the end.
+      stage.style.setProperty('--shade-r', Math.max(ops[0], ops[1]).toFixed(3))
+      stage.style.setProperty('--shade-l', ops[2].toFixed(3))
+      stage.style.setProperty('--veil', ramp(progress, 0.88, 1).toFixed(3))
       if (barRef.current) barRef.current.style.transform = `scaleX(${progress.toFixed(4)})`
+      const frameNo = Math.round(progress * FRAME_COUNT)
+      if (frameNo !== lastFrameNo && frameRef.current) {
+        lastFrameNo = frameNo
+        frameRef.current.textContent = `F ${String(frameNo).padStart(4, '0')}`
+      }
       if (top !== activeBeat && counterRef.current) {
         activeBeat = top
         counterRef.current.textContent = `0${top + 1} / 0${beats.length}  ${BEAT_LABELS[top]}`
@@ -244,6 +262,18 @@ function MotionScene() {
 
     let animating = true
     const tick = () => {
+      const nowMs = performance.now()
+      const dt = nowMs - lastTick
+      lastTick = nowMs
+      // A mouse wheel moves the page in notches. The drawn progress closes on the real one within a few
+      // frames and lands exactly on it, so the resting picture is unchanged. Touch scrolling is already
+      // continuous and is drawn directly. Off-screen or hidden: no easing, just the real value.
+      const next =
+        fine && inView && document.visibilityState === 'visible' ? follow(progress, target, dt) : target
+      if (next !== progress) {
+        progress = next
+        dirty = true
+      }
       if (fine) {
         // Ease toward the pointer, then snap so the frame settles exactly.
         let nx = tiltX + (aimX - tiltX) * TILT.ease
@@ -340,15 +370,18 @@ function MotionScene() {
       start: 'top top',
       end: 'bottom bottom',
       onUpdate: (self) => {
-        progress = self.progress
+        target = self.progress
         dirty = true
       },
+      // After a resize, a font load or a reload the picture is recomputed exactly, not eased.
       onRefresh: (self) => {
-        progress = self.progress
+        target = self.progress
+        progress = target
         dirty = true
       },
     })
-    progress = st.progress
+    target = st.progress
+    progress = target
     document.fonts?.ready.then(() => {
       if (disposed) return
       ScrollTrigger.refresh()
@@ -360,7 +393,7 @@ function MotionScene() {
     // the same moment of the sequence instead of the same pixel offset.
     let keep = -1
     const onRefreshInit = () => {
-      keep = progress > 0 && progress < 1 ? progress : -1
+      keep = target > 0 && target < 1 ? target : -1
     }
     const onRefreshed = () => {
       if (keep < 0) return
@@ -423,6 +456,7 @@ function MotionScene() {
         <canvas ref={glRef} className="scene-canvas scene-canvas--gl" aria-hidden="true" />
         <div className="scene-scrim" aria-hidden="true" />
         <div className="grain" aria-hidden="true" />
+        <div className="scene-veil" aria-hidden="true" />
 
         {/* Decorative line work: outline build-in, labels, and service callouts (beat 2). */}
         <svg ref={svgRef} className="scene-lines" aria-hidden="true" focusable="false">
@@ -481,6 +515,9 @@ function MotionScene() {
           </span>
           <span className="scene-track">
             <span ref={barRef} className="scene-bar" />
+          </span>
+          <span ref={frameRef} className="scene-frame">
+            F 0000
           </span>
           <span className="scene-hint">Scroll</span>
         </div>

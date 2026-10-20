@@ -17,6 +17,19 @@
         color: #f3f3f1;
       }
     </style>
+    <script>
+      // Decide the Services layout before first paint, so nothing reflows and a reload halfway down the
+      // page lands in the right place. Reduced motion (or ?motion=off) keeps the plain, complete layout.
+      // If the app script never starts, fall back to that layout after 8 s so no content stays hidden.
+      ;(function () {
+        var d = document.documentElement
+        if (matchMedia('(prefers-reduced-motion: reduce)').matches || /[?&]motion=off/.test(location.search)) return
+        d.dataset.svc = 'motion'
+        setTimeout(function () {
+          if (!d.dataset.svcLive) delete d.dataset.svc
+        }, 8000)
+      })()
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preload" as="image" href="/media/beat1-establish-1280.webp" type="image/webp" fetchpriority="high" />
     <meta property="og:type" content="website" />

@@ -100,14 +100,18 @@ void main() {
   float on = step(1.0 - uGlitch * 0.5, hash(vec2(band, uSeed)));
   uv.x += on * (hash(vec2(band, uSeed + 3.1)) - 0.5) * 0.06 * uGlitch;
 
-  vec3 c = texture2D(tScene, uv).rgb;
+  // Chromatic split: only inside a transition, so the rest of the page stays pure monochrome.
+  float ab = 0.007 * uGlitch;
+  vec3 c = vec3(texture2D(tScene, uv + vec2(ab, 0.0)).r, texture2D(tScene, uv).g, texture2D(tScene, uv - vec2(ab, 0.0)).b);
   float g = 0.008 * uGlitch;
   vec3 ghosts = texture2D(tScene, uv + vec2(g, 0.0)).rgb + texture2D(tScene, uv - vec2(g, 0.0)).rgb;
   c += ghosts * 0.22 * uGlitch;
 
   c = aces(c * uExposure);
   float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
-  c = vec3(l);
+  // Cold grey grade at rest; the colour fringes fade in with the glitch.
+  vec3 grey = vec3(l) * vec3(0.97, 0.99, 1.02);
+  c = mix(grey, c * vec3(0.97, 0.99, 1.02), clamp(uGlitch * 1.3, 0.0, 1.0));
 
   float veil = uGlitch * 0.42 * (0.6 + 0.4 * (1.0 - abs(vUv.y - 0.55) * 2.0));
   c = mix(c, vec3(0.74, 0.75, 0.76), veil);

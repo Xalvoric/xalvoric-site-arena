@@ -37,7 +37,6 @@ export function HeroCopy({ beat }: { beat: BeatId }) {
                   0{i + 1}
                 </span>
                 <span className="hero-list-label">{item.label}</span>
-                <span className="hero-list-note">{item.note}</span>
               </a>
             </li>
           ))}

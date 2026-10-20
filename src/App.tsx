@@ -1,6 +1,7 @@
 import { Nav } from './components/Nav'
 import { ScrollScene } from './components/ScrollScene'
-import { Faq, Process, Services } from './components/Sections'
+import { Faq, Process } from './components/Sections'
+import { Services } from './components/Services'
 import { Contact } from './components/Contact'
 import { Footer } from './components/Footer'
 

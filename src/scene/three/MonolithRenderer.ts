@@ -68,6 +68,7 @@ export class MonolithRenderer implements HeroRenderer {
   private body: MeshPhysicalMaterial
   private mirror: MeshPhysicalMaterial
   private env: Texture
+  private fog: FogExp2
   private cssW = 1
   private cssH = 1
   private opts: MonolithOptions
@@ -112,7 +113,8 @@ export class MonolithRenderer implements HeroRenderer {
     this.env = envRT.texture
     this.scene.environment = this.env
     // Fog matches the sky's horizon tone so the floor melts into it.
-    this.scene.fog = new FogExp2(new Color().setRGB(0.021, 0.021, 0.022, LinearSRGBColorSpace), 0.045)
+    this.fog = new FogExp2(new Color().setRGB(0.021, 0.021, 0.022, LinearSRGBColorSpace), 0.045)
+    this.scene.fog = this.fog
     this.disposables.push(pmrem, envRT, envSky.material as ShaderMaterial, skyMat, sky.geometry)
 
     // --- monolith ----------------------------------------------------------
@@ -304,6 +306,9 @@ export class MonolithRenderer implements HeroRenderer {
     this.lineMat.uniforms.uAlpha.value = Math.max(s.lineAlpha * 0.85, detail * 0.35)
     // Lines read white even while the scene exposure is still rising.
     this.lineMat.uniforms.uBoost.value = Math.min(12, 1.6 / exposure)
+
+    // The fog thickens through each transition, so the dive is real depth and not only a grey veil.
+    this.fog.density = 0.045 + fx.amount * 0.07
 
     const pu = this.postMat.uniforms
     pu.uTime.value = t

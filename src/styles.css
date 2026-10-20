@@ -268,7 +268,7 @@ main:focus {
   inset: 0;
   z-index: 1;
   height: var(--header-h);
-  background: rgba(5, 5, 5, 0.84);
+  background: rgba(5, 5, 5, 0.985);
   backdrop-filter: blur(14px) saturate(120%);
   -webkit-backdrop-filter: blur(14px) saturate(120%);
   border-bottom: 1px solid var(--line);
@@ -577,6 +577,37 @@ main:focus {
     radial-gradient(120% 90% at 50% 50%, rgba(5, 5, 5, 0) 55%, rgba(5, 5, 5, 0.6) 100%);
 }
 
+/*
+ * Side shades behind the copy column (wide screens). Opacity follows whichever beat is showing
+ * (--shade-r / --shade-l, written by ScrollScene), so the bright horizon glow never sits behind text.
+ * Worst case behind the body copy goes from about 2:1 to well over 4.5:1 (measure: see README).
+ */
+.scene-scrim::before,
+.scene-scrim::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.scene-scrim::after {
+  background: linear-gradient(270deg, rgba(5, 5, 5, 0.82) 0%, rgba(5, 5, 5, 0.74) 36%, rgba(5, 5, 5, 0.5) 46%, rgba(5, 5, 5, 0) 62%);
+  opacity: var(--shade-r, 1);
+}
+
+.scene-scrim::before {
+  background: linear-gradient(90deg, rgba(5, 5, 5, 0.82) 0%, rgba(5, 5, 5, 0.74) 34%, rgba(5, 5, 5, 0.5) 44%, rgba(5, 5, 5, 0) 60%);
+  opacity: var(--shade-l, 0);
+}
+
+/* Hand-off to the Services section: fog rises, then settles to the page black. */
+.scene-veil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(90% 70% at 50% 62%, rgba(196, 200, 206, 0.5), rgba(5, 5, 5, 0.97) 82%);
+  opacity: var(--veil, 0);
+}
+
 .grain {
   position: absolute;
   inset: 0;
@@ -643,9 +674,10 @@ main:focus {
 .hero-body {
   margin-top: 24px;
   max-width: 40ch;
-  color: #e4e4e0;
+  color: #f0f0ec;
   font-size: clamp(1rem, 0.95rem + 0.3vw, 1.18rem);
   text-wrap: pretty;
+  text-shadow: 0 1px 18px rgba(5, 5, 5, 0.85);
 }
 
 .hero-actions {
@@ -664,8 +696,11 @@ main:focus {
 .hero-list a {
   display: grid;
   grid-template-columns: 40px 1fr;
+  align-items: baseline;
   column-gap: 8px;
-  padding: 16px 0;
+  min-height: 56px;
+  align-content: center;
+  padding: 14px 0;
   border-top: 1px solid var(--line-strong);
 }
 
@@ -678,23 +713,16 @@ main:focus {
 }
 
 .hero-list-index {
-  grid-row: span 2;
   font-family: var(--mono);
   font-size: 0.75rem;
   letter-spacing: 0.08em;
   color: var(--muted);
-  padding-top: 0.45em;
 }
 
 .hero-list-label {
   font-size: clamp(1.15rem, 1rem + 0.5vw, 1.45rem);
   font-weight: 520;
   letter-spacing: -0.02em;
-}
-
-.hero-list-note {
-  color: #c6c6c2;
-  font-size: 0.95rem;
 }
 
 .scene-hud {
@@ -731,6 +759,17 @@ main:focus {
   background: var(--ink);
   transform-origin: left center;
   transform: scaleX(0);
+}
+
+.scene-frame {
+  font-variant-numeric: tabular-nums;
+  white-space: pre;
+}
+
+@media (max-width: 559px) {
+  .scene-frame {
+    display: none;
+  }
 }
 
 .scene-hint {
@@ -788,6 +827,11 @@ main:focus {
 }
 
 @media (max-width: 859px) {
+  .scene-scrim::before,
+  .scene-scrim::after {
+    display: none;
+  }
+
   .scene-scrim {
     background:
       linear-gradient(180deg, rgba(5, 5, 5, 0.5) 0%, rgba(5, 5, 5, 0) 20%),
@@ -840,12 +884,6 @@ main:focus {
 
   .scene-track {
     flex-basis: 90px;
-  }
-}
-
-@media (max-height: 640px) and (max-width: 859px) {
-  .hero-list-note {
-    display: none;
   }
 }
 
@@ -910,34 +948,97 @@ main:focus {
   margin-bottom: clamp(48px, 7vw, 96px);
 }
 
-/* Services */
+/* ==========================================================================
+   Services: "Three ways we help a business grow."
+   Default layout is normal document flow (phones, tablets, short windows, no
+   script, reduced motion, prerender). The pinned stage is layered on top for
+   wide, tall windows when script is driving it (see the PINNED block below).
+   ========================================================================== */
 .services {
   border-top: 1px solid var(--line);
+  padding-block: var(--section-y);
 }
 
-.service-list {
-  counter-reset: svc;
+.svc-head {
+  max-width: 62ch;
 }
 
-.service {
+.svc-title {
+  font-size: clamp(2.1rem, 1.1rem + 3.3vw, 4.4rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-weight: 540;
+  text-wrap: balance;
+  max-width: 16ch;
+}
+
+.svc-top {
   display: grid;
-  grid-template-columns: minmax(56px, 0.35fr) 1.25fr 1fr;
-  gap: 28px clamp(32px, 5vw, 80px);
-  padding-block: clamp(40px, 5.5vw, 72px);
+  gap: 32px;
+  margin-bottom: clamp(32px, 5vw, 64px);
+  padding-inline: var(--gutter);
+  max-width: var(--max);
+  margin-inline: auto;
+}
+
+.svc-rail ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.svc-rail a {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 20px 0 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  font-size: 0.92rem;
+  transition:
+    border-color 0.25s var(--ease-out),
+    background-color 0.25s var(--ease-out);
+}
+
+.svc-rail a:hover,
+.svc-rail a[aria-current] {
+  border-color: var(--ink);
+}
+
+.svc-rail-n {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.svc-chapters {
+  max-width: var(--max);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.svc-chap {
+  position: relative;
+  display: grid;
+  gap: 28px;
+  padding-block: clamp(36px, 6vw, 72px);
   border-top: 1px solid var(--line);
   scroll-margin-top: calc(var(--header-h) + 16px);
 }
 
-.service:last-child {
+.svc-chap:last-child {
   border-bottom: 1px solid var(--line);
 }
 
-.service-index {
+.svc-kicker {
+  margin-bottom: 18px;
   font-family: var(--mono);
-  font-size: 0.8rem;
-  letter-spacing: 0.1em;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--muted);
-  padding-top: 0.9em;
 }
 
 .service-name {
@@ -947,21 +1048,32 @@ main:focus {
   font-weight: 540;
 }
 
+.svc-outcome {
+  margin-top: 16px;
+  font-size: clamp(1.15rem, 1rem + 0.5vw, 1.4rem);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
 .service-lede {
-  margin-top: 20px;
-  max-width: 38ch;
+  margin-top: 14px;
+  max-width: 44ch;
   color: var(--muted);
-  font-size: clamp(1.05rem, 1rem + 0.25vw, 1.2rem);
+  font-size: clamp(1.02rem, 1rem + 0.2vw, 1.15rem);
   text-wrap: pretty;
 }
 
-.service-detail .mini-label {
-  margin-bottom: 14px;
+.svc-detail {
+  margin-top: 28px;
 }
 
-.service-detail .mini-label + p,
-.tick-list {
-  margin-bottom: 32px;
+.svc-detail .mini-label {
+  margin-bottom: 12px;
+}
+
+.svc-detail .tick-list {
+  margin-bottom: 28px;
 }
 
 .tick-list li {
@@ -982,18 +1094,345 @@ main:focus {
 }
 
 .service-fit {
-  max-width: 40ch;
+  max-width: 44ch;
   color: var(--muted);
 }
 
-@media (max-width: 959px) {
-  .service {
-    grid-template-columns: 1fr;
-    gap: 20px;
+/* Drawing frame: a dark plate with mono corner labels. Phones: drawing first, then the words. */
+.svc-visual {
+  position: relative;
+  order: -1;
+  aspect-ratio: 8 / 5;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+  background:
+    radial-gradient(70% 70% at 50% 45%, rgba(243, 243, 241, 0.07), rgba(243, 243, 241, 0) 75%),
+    var(--bg-raised);
+}
+
+.svc-visual svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.sv-corner,
+.sv-tag {
+  position: absolute;
+  font-family: var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #c9c9c5;
+  white-space: nowrap;
+}
+
+.sv-corner {
+  left: 44px;
+  top: 10px;
+  font-size: 0.66rem;
+}
+
+.sv-tag {
+  font-size: clamp(0.56rem, 0.48rem + 0.3vw, 0.7rem);
+  opacity: clamp(0, calc((var(--b, 1) - var(--d, 0)) * 4), 1);
+}
+
+/*
+ * Drawing rules. `--b` (0..1, how built) comes from the chapter; `--d` is each part's own start.
+ * With `--b` unset every part is complete.
+ */
+.sv .draw {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.25;
+  stroke-dasharray: 1;
+  stroke-dashoffset: calc(1 - clamp(0, (var(--b, 1) - var(--d, 0)) * 3.2, 1));
+}
+
+.sv .draw.bar {
+  stroke-width: 6;
+}
+
+.sv .draw.tick {
+  stroke: rgba(243, 243, 241, 0.4);
+}
+
+.sv .fill {
+  fill: currentColor;
+  stroke: none;
+  fill-opacity: calc(clamp(0, (var(--b, 1) - var(--d, 0.6)) * 4, 1) * var(--fa, 0.12));
+}
+
+/* A bright line that sweeps the page while it is being built, then is gone. */
+.sv .scan {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+  opacity: calc(clamp(0, var(--b, 1) * 10, 1) * (1 - clamp(0, (var(--b, 1) - 0.72) * 4, 1)));
+  transform: translateY(calc(44px + var(--b, 1) * 312px));
+}
+
+/* A short bright segment that travels along each link as the agent is wired up. */
+.sv .pulse {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2.2;
+  stroke-dasharray: 0.07 1;
+  stroke-dashoffset: calc(0.07 - clamp(0, (var(--b, 1) - var(--d, 0)) * 2.4, 1.07));
+}
+
+/* Ads: three frames slide out of one square (--sp is 0 stacked, 1 spread). */
+.sv-ads {
+  --sp: clamp(0, calc((var(--b, 1) - 0.25) * 2), 1);
+}
+
+.sv .ad-frame {
+  transform: translate(calc(320px + var(--sp) * var(--x) * 1px), 200px);
+}
+
+.sv .ad-frame .draw {
+  stroke-width: 1.25;
+}
+
+@media (min-width: 760px) {
+  .svc-chap {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: clamp(32px, 5vw, 80px);
+    align-items: start;
   }
 
-  .service-index {
-    padding-top: 0;
+  /* Tablet and short desktop: the drawing stays in view while its text scrolls. */
+  .svc-visual {
+    order: 2;
+    position: sticky;
+    top: calc(var(--header-h) + 24px);
+  }
+}
+
+/* Pinned-only pieces are hidden in flow. */
+.svc-fog,
+.svc-hud {
+  display: none;
+}
+
+/* ---- PINNED: wide + tall windows, script driving (keep in step with PINNED in Services.tsx) ---- */
+@media (min-width: 1000px) and (min-height: 760px) {
+  html[data-svc='motion'] .services {
+    padding-block: 0;
+  }
+
+  html[data-svc='motion'] .svc-track {
+    /* 100svh of stage + 300svh of scroll: 0.14 headline, then three chapters. */
+    height: 400vh;
+    height: 400svh;
+  }
+
+  html[data-svc='motion'] .svc-stage {
+    --intro: 1;
+    --svc-gap: clamp(32px, 5vw, 96px);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100svh;
+    display: grid;
+    overflow: hidden;
+    isolation: isolate;
+    padding-inline: max(var(--gutter), calc((100% - var(--max)) / 2 + var(--gutter)));
+  }
+
+  html[data-svc='motion'] .svc-stage > * {
+    grid-area: 1 / 1;
+  }
+
+  /* A soft glow that drifts with progress: the camera keeps moving even while a chapter holds. */
+  html[data-svc='motion'] .svc-stage::before {
+    content: '';
+    grid-area: 1 / 1;
+    z-index: -1;
+    background: radial-gradient(50% 55% at calc(76% - var(--s, 0) * 14%) 62%, rgba(243, 243, 241, 0.08), rgba(243, 243, 241, 0) 70%);
+  }
+
+  html[data-svc='motion'] .svc-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 32px;
+    margin: 0;
+    padding: calc(var(--header-h) + 28px) 0 0;
+    max-width: none;
+    pointer-events: none;
+  }
+
+  html[data-svc='motion'] .svc-head {
+    width: min(100%, 600px);
+    max-width: none;
+  }
+
+  /* The headline starts large and settles to a heading as chapter 1 takes over. Scale, never reflow. */
+  html[data-svc='motion'] .svc-title {
+    font-size: clamp(3rem, 1rem + 4.6vw, 5.4rem);
+    transform-origin: 0 0;
+    transform: scale(calc(0.55 + 0.45 * var(--intro, 0)));
+    will-change: transform;
+  }
+
+  html[data-svc='motion'] .svc-lede {
+    opacity: clamp(0, calc((var(--intro, 0) - 0.5) * 2), 1);
+  }
+
+  html[data-svc='motion'] .svc-rail {
+    pointer-events: auto;
+  }
+
+  html[data-svc='motion'] .svc-rail ol {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  html[data-svc='motion'] .svc-rail a {
+    justify-content: flex-start;
+    min-width: 232px;
+    border-color: transparent;
+    padding-inline: 0 8px;
+    color: var(--muted);
+  }
+
+  html[data-svc='motion'] .svc-rail a[aria-current] {
+    color: var(--ink);
+  }
+
+  html[data-svc='motion'] .svc-rail a::after {
+    content: '';
+    flex: none;
+    width: 0;
+    height: 1px;
+    margin-left: auto;
+    background: var(--ink);
+    transition: width 0.3s var(--ease-out);
+  }
+
+  html[data-svc='motion'] .svc-rail a[aria-current]::after,
+  html[data-svc='motion'] .svc-rail a:hover::after {
+    width: 28px;
+  }
+
+  html[data-svc='motion'] .svc-chapters {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    grid-template-rows: minmax(0, 1fr);
+    column-gap: var(--svc-gap);
+    max-width: none;
+    margin: 0;
+    padding: calc(var(--header-h) + 28px) 0 64px;
+    pointer-events: none;
+  }
+
+  html[data-svc='motion'] .svc-chap {
+    /* Before script writes a value, only chapter 1 shows, built from nothing. */
+    --b: 0;
+    --o: 0;
+    position: static;
+    grid-column: 1 / -1;
+    grid-row: 1;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    grid-template-columns: subgrid;
+    align-items: end;
+    gap: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  html[data-svc='motion'] .svc-chap:first-child {
+    --o: 1;
+  }
+
+  html[data-svc='motion'] .svc-copy {
+    max-width: 30rem;
+    /* Text only shows while its chapter is mostly on, so two chapters' words never overlap. */
+    opacity: calc(clamp(0, calc((var(--o, 1) - 0.55) * 4), 1) * clamp(0, calc((0.5 - var(--intro, 0)) * 4), 1));
+    transform: translateY(calc((1 - var(--o, 1)) * 20px));
+  }
+
+  html[data-svc='motion'] .service-name {
+    font-size: clamp(1.9rem, 1rem + 1.7vw, 2.7rem);
+  }
+
+  html[data-svc='motion'] .svc-outcome {
+    margin-top: 12px;
+  }
+
+  html[data-svc='motion'] .svc-detail {
+    margin-top: 22px;
+  }
+
+  html[data-svc='motion'] .tick-list li {
+    padding-block: 8px;
+    font-size: 0.94rem;
+  }
+
+  html[data-svc='motion'] .svc-detail .tick-list {
+    margin-bottom: 20px;
+  }
+
+  html[data-svc='motion'] .svc-visual {
+    order: 0;
+    position: relative;
+    top: auto;
+    opacity: var(--o, 1);
+    transform: scale(calc(0.96 + 0.04 * var(--o, 1)));
+    transform-origin: 70% 100%;
+  }
+
+  html[data-svc='motion'] .svc-fog {
+    display: block;
+    z-index: 1;
+    pointer-events: none;
+    background: radial-gradient(55% 55% at 68% 64%, rgba(206, 210, 216, 0.55), rgba(206, 210, 216, 0) 72%);
+    opacity: calc(var(--fog, 0) * 0.85);
+  }
+
+  html[data-svc='motion'] .svc-hud {
+    display: flex;
+    align-items: center;
+    align-self: end;
+    gap: 18px;
+    padding-bottom: 22px;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #c9c9c5;
+    pointer-events: none;
+  }
+
+  html[data-svc='motion'] .svc-count {
+    white-space: pre;
+  }
+
+  html[data-svc='motion'] .svc-bar-track {
+    position: relative;
+    flex: 0 1 160px;
+    height: 1px;
+    overflow: hidden;
+    background: var(--line-strong);
+  }
+
+  html[data-svc='motion'] .svc-bar {
+    position: absolute;
+    inset: 0;
+    background: var(--ink);
+    transform-origin: left center;
+    transform: scaleX(0);
+  }
+
+  html[data-svc='motion'] .svc-frame {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
   }
 }
 
@@ -1023,9 +1462,24 @@ main:focus {
   gap: clamp(28px, 3vw, 48px);
 }
 
+.process-grid {
+  position: relative;
+}
+
+/* The rule over the steps fills as they scroll past (--b, written by Sections.tsx); complete without script. */
+.process-grid::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: var(--paper-ink);
+  transform-origin: left center;
+  transform: scaleX(var(--b, 1));
+}
+
 .process-step {
   padding-top: 24px;
-  border-top: 1px solid var(--paper-ink);
+  border-top: 2px solid var(--paper-line);
 }
 
 .process-num {
@@ -1325,13 +1779,14 @@ main:focus {
 
 .footer-nav {
   display: grid;
-  gap: 4px;
+  gap: 0;
 }
 
 .footer-nav a {
   display: inline-flex;
   align-items: center;
-  min-height: 40px;
+  min-height: 48px;
+  min-width: 44px;
   color: var(--muted);
 }
 
